@@ -44,9 +44,11 @@ export default function LiveCamera() {
     if (!ctx) return;
     syncCanvas();
     const tracks = tracksRef.current;
-    tracks.length
-      ? drawDetections(ctx, tracks, c.width, c.height, v.videoWidth || c.width, v.videoHeight || c.height)
-      : clearCanvas(ctx, c.width, c.height);
+    if (tracks.length) {
+      drawDetections(ctx, tracks, c.width, c.height, v.videoWidth || c.width, v.videoHeight || c.height);
+    } else {
+      clearCanvas(ctx, c.width, c.height);
+    }
     rafRef.current = requestAnimationFrame(renderLoop);
   }, [syncCanvas]);
 

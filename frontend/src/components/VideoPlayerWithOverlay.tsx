@@ -38,9 +38,11 @@ const VideoPlayerWithOverlay = forwardRef<VideoPlayerHandle, Props>(
       if (!ctx) return;
       sync();
       const dets = getDetections(v.currentTime);
-      dets.length
-        ? drawDetections(ctx, dets, c.width, c.height, v.videoWidth || c.width, v.videoHeight || c.height)
-        : clearCanvas(ctx, c.width, c.height);
+      if (dets.length) {
+        drawDetections(ctx, dets, c.width, c.height, v.videoWidth || c.width, v.videoHeight || c.height);
+      } else {
+        clearCanvas(ctx, c.width, c.height);
+      }
       rafRef.current = requestAnimationFrame(loop);
     }, [sync, getDetections]);
 
