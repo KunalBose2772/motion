@@ -1,26 +1,129 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --bs-font-sans-serif: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --bs-primary: #4f46e5;
+  --bs-primary-rgb: 79, 70, 229;
+  --bs-body-bg: #f8fafc;
+  --bs-body-color: #0f172a;
+  
+  --custom-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --custom-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --custom-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --custom-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--bs-font-sans-serif);
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}
+
+/* Custom Utilities that Bootstrap doesn't provide natively out of the box in the exact way we want */
+.bg-punchy-primary { background-color: #4f46e5; }
+.bg-punchy-primary-light { background-color: #eef2ff; }
+
+.bg-punchy-pink { background-color: #f43f5e; }
+.bg-punchy-cyan { background-color: #06b6d4; }
+.bg-punchy-orange { background-color: #f97316; }
+.bg-punchy-lime { background-color: #10b981; }
+.bg-punchy-dark { background-color: #0f172a; }
+
+.text-punchy-primary { color: #4f46e5; }
+
+.shadow-custom-sm { box-shadow: var(--custom-shadow-sm) !important; }
+.shadow-custom-md { box-shadow: var(--custom-shadow-md) !important; }
+.shadow-custom-lg { box-shadow: var(--custom-shadow-lg) !important; }
+.shadow-custom-xl { box-shadow: var(--custom-shadow-xl) !important; }
+
+.rounded-xl { border-radius: 0.75rem !important; }
+.rounded-2xl { border-radius: 1rem !important; }
+.rounded-3xl { border-radius: 1.5rem !important; }
+
+.border-dashed { border-style: dashed !important; }
+.border-2 { border-width: 2px !important; }
+
+/* Custom Overrides for Bootstrap elements */
+.card {
+  border-radius: 1rem;
+  border-color: #e2e8f0;
+  box-shadow: var(--custom-shadow-sm);
+  border: 1px solid rgba(0,0,0,.05);
+}
+
+.btn-primary {
+  background-color: #4f46e5;
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(79,70,229,0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(79,70,229,0.45);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(79,70,229,0.3);
+}
+
+.btn-outline-primary {
+  color: #4f46e5;
+  border-color: #4f46e5;
+  font-weight: 600;
+}
+
+.btn-outline-primary:hover {
+  background-color: #4f46e5;
+  color: #fff;
+}
+
+/* Animations */
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.anim-pulse-dot {
+  animation: pulseDot 1.5s ease-in-out infinite;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.anim-fade-up {
+  animation: fadeUp 0.4s ease-out both;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.anim-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Tabs */
+.nav-pills .nav-link {
+  color: #64748b;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  padding: 0.5rem 1rem;
+}
+
+.nav-pills .nav-link:hover {
+  background-color: #f1f5f9;
+  color: #334155;
+}
+
+.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
+  background-color: #fff;
+  color: #4f46e5;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
