@@ -1,10 +1,16 @@
-# Use a slim Python base image
-FROM python:3.11-slim
+# Use a more stable base image
+FROM python:3.11-slim-bookworm
 
-# Install system dependencies for OpenCV and YOLOv8
-RUN apt-get update && apt-get install -y \
+# Set environment variables to prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# Install system dependencies with retries and a clean cache
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     libgl1-mesa-glx \
     libglib2.0-0 \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -12,7 +18,8 @@ WORKDIR /app
 
 # Copy requirements and install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
 COPY . .
