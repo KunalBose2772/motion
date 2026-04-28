@@ -79,13 +79,67 @@ def friendly_label(coco_name: str) -> str:
     return LABEL_MAP.get(coco_name, coco_name)
 
 
+# ── Global Visual Memory (Spatial Locking) ───────────────────────────────────
+
+class VisualMemory:
+    """
+    Stores visual signatures of objects to prevent double-counting 
+    when the camera returns to a previously seen area (e.g. 360-degree turn).
+    """
+    def __init__(self, threshold=0.75):
+        self.signatures = {}  # { class_name: [ {id, descriptor, center_color} ] }
+        self.threshold = threshold
+
+    def get_signature(self, image, box):
+        # Crop and get a visual signature using a simplified color-texture hash
+        x, y, w, h = [int(v) for v in box]
+        crop = image[max(0, y):y+h, max(0, x):x+w]
+        if crop.size == 0: return None
+        
+        # Resize to standard size for comparison
+        small = cv2.resize(crop, (64, 64))
+        # Color signature (HSV histogram)
+        hsv = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)
+        hist = cv2.calcHist([hsv], [0, 1], None, [8, 8], [0, 180, 0, 256])
+        cv2.normalize(hist, hist)
+        return hist
+
+    def find_match(self, cls, signature):
+        if signature is None or cls not in self.signatures:
+            return None
+        
+        best_match = None
+        max_sim = -1
+        
+        for item in self.signatures[cls]:
+            sim = cv2.compareHist(signature, item["signature"], cv2.HISTCMP_CORREL)
+            if sim > max_sim:
+                max_sim = sim
+                best_match = item["id"]
+        
+        if max_sim > self.threshold:
+            return best_match
+        return None
+
+    def add_signature(self, cls, obj_id, signature):
+        if signature is None: return
+        if cls not in self.signatures:
+            self.signatures[cls] = []
+        self.signatures[cls].append({"id": obj_id, "signature": signature})
+
+
+# ── Global State ─────────────────────────────────────────────────────────────
+
+visual_memory = VisualMemory()
+
+
 def run_detection_on_frame(
     frame_bgr: np.ndarray,
     track_history: dict[int, str],
+    use_spatial_locking: bool = True
 ) -> list[dict[str, Any]]:
     """
-    Run YOLOv8 inference + ByteTrack tracking on a single BGR frame.
-    Returns a list of detection dicts compatible with the frontend schema.
+    Run YOLOv8 inference + ByteTrack tracking + Visual ReID.
     """
     results = model.track(
         frame_bgr,
@@ -104,18 +158,29 @@ def run_detection_on_frame(
             cls_id = int(box.cls[0])
             cls_name = model.names[cls_id]
 
-            # Only report classes that are relevant to inventory
             if cls_name not in COCO_CLASSES_OF_INTEREST:
                 continue
 
             label = friendly_label(cls_name)
             conf  = float(box.conf[0])
             track_id = int(box.id[0]) if box.id is not None else -1
-
-            # xyxy → xywh (top-left origin)
+            
+            # xyxy
             x1, y1, x2, y2 = box.xyxy[0].tolist()
             w = x2 - x1
             h = y2 - y1
+
+            # --- SPATIAL LOCKING LOGIC ---
+            if use_spatial_locking and track_id != -1:
+                sig = visual_memory.get_signature(frame_bgr, [x1, y1, w, h])
+                match_id = visual_memory.find_match(label, sig)
+                
+                if match_id is not None:
+                    # Found an old friend! Reuse the ID to prevent re-counting
+                    track_id = match_id
+                else:
+                    # New unique object, remember its face
+                    visual_memory.add_signature(label, track_id, sig)
 
             if track_id != -1:
                 track_history[track_id] = label
@@ -202,6 +267,7 @@ async def analyze_video(video: UploadFile = File(...)):
 
     frames_data: list[dict] = []
     track_history: dict[int, str] = {}
+    visual_memory.signatures = {}  # Reset spatial memory for new job
 
     frame_idx = 0
     while True:
@@ -295,6 +361,7 @@ async def ws_live(ws: WebSocket):
     """
     await ws.accept()
     track_history: dict[int, str] = {}
+    visual_memory.signatures = {}  # Reset spatial memory for new live session
 
     try:
         while True:

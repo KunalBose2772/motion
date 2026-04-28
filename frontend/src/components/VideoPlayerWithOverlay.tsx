@@ -74,8 +74,8 @@ const VideoPlayerWithOverlay = forwardRef<VideoPlayerHandle, Props>(
     }, [sync]);
 
     return (
-      <div className="position-relative w-100 rounded-4 overflow-hidden bg-dark shadow-custom-md">
-        <video ref={videoRef} src={src} controls playsInline className="w-100 d-block" />
+      <div className="position-relative w-100 rounded-4 overflow-hidden bg-dark shadow-custom-md" style={{ maxHeight: '70vh' }}>
+        <video ref={videoRef} src={src} controls playsInline className="w-100 d-block" style={{ maxHeight: '70vh', objectFit: 'contain' }} />
         <canvas ref={canvasRef} className="position-absolute top-0 start-0 w-100 h-100 pe-none" />
 
         {/* Detection active badge */}

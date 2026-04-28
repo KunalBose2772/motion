@@ -34,15 +34,15 @@ const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
 
 export default function Tabs({ activeTab, onTabChange }: TabsProps) {
   return (
-    <ul className="nav nav-pills bg-light p-1 rounded-3 d-inline-flex border">
+    <ul className="nav nav-pills bg-light p-1 rounded-3 d-inline-flex border flex-nowrap overflow-auto no-scrollbar">
       {TABS.map((tab) => {
         const active = activeTab === tab.id;
         return (
-          <li className="nav-item" key={tab.id}>
+          <li className="nav-item flex-grow-1" key={tab.id}>
             <button
               onClick={() => onTabChange(tab.id)}
-              className={`nav-link d-flex align-items-center justify-content-center ${active ? 'active bg-white text-primary shadow-sm' : 'text-secondary'}`}
-              style={{ padding: '0.4rem 1.2rem' }}
+              className={`nav-link d-flex align-items-center justify-content-center h-100 text-nowrap ${active ? 'active bg-white text-primary shadow-sm' : 'text-secondary'}`}
+              style={{ padding: '0.4rem 1rem', fontSize: 'clamp(12px, 3vw, 14px)' }}
             >
               {tab.icon}
               {tab.label}
