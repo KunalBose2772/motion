@@ -4,7 +4,7 @@ import { useRef, useEffect, useCallback, useState } from "react";
 import type { LiveTrack, ConnectionState } from "@/types";
 import { drawDetections, clearCanvas } from "@/lib/drawing";
 
-const WS_URL         = process.env.NEXT_PUBLIC_WS_URL ?? "wss://motion-backend-xyfy.onrender.com/ws/live";
+const WS_URL         = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000/ws/live";
 const FRAME_INTERVAL = 120;
 
 const CLASS_EMOJI: Record<string, string> = {
