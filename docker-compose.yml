@@ -10,7 +10,7 @@ services:
       - ./backend/outputs:/app/outputs
 
   frontend:
-    build: .
+    build: ./frontend
     ports:
       - "3000:3000"
     environment:
