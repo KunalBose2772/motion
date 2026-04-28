@@ -16,7 +16,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND = process.env.BACKEND_URL ?? "http://localhost:8000";
+const BACKEND = process.env.BACKEND_URL ?? "https://motion-backend-xyfy.onrender.com";
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "wss://motion-backend-xyfy.onrender.com/ws/live";
 
 export async function POST(req: NextRequest) {
   let body: FormData;
