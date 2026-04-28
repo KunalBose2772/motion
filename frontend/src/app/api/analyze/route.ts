@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from "next/server";
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:8000";
 
 export async function POST(req: NextRequest) {
+  console.log("Proxying /api/analyze request to backend:", BACKEND);
   let body: FormData;
   try {
     body = await req.formData();
