@@ -8,23 +8,8 @@ interface ResultsPanelProps {
   error: string | null;
 }
 
-const CLASS_CFG: Record<string, { emoji: string; color: string; bg: string }> = {
-  bed:         { emoji: "🛏️",  color: "#198754", bg: "#d1e7dd" }, // success
-  chair:       { emoji: "🪑",  color: "#0d6efd", bg: "#cfe2ff" }, // primary
-  table:       { emoji: "🪵",  color: "#fd7e14", bg: "#ffe5d0" }, // orange
-  "dining table": { emoji: "🍽️", color: "#fd7e14", bg: "#ffe5d0" },
-  couch:       { emoji: "🛋️",  color: "#6f42c1", bg: "#e0cffc" }, // purple
-  sofa:        { emoji: "🛋️",  color: "#6f42c1", bg: "#e0cffc" },
-  tv:          { emoji: "📺",  color: "#0dcaf0", bg: "#cff4fc" }, // info
-  monitor:     { emoji: "🖥️",  color: "#0dcaf0", bg: "#cff4fc" },
-  laptop:      { emoji: "💻",  color: "#6c757d", bg: "#e2e3e5" }, // secondary
-  person:      { emoji: "🧑",  color: "#dc3545", bg: "#f8d7da" }, // danger
-  cabinet:     { emoji: "🗄️",  color: "#fd7e14", bg: "#ffe5d0" },
-  bottle:      { emoji: "🍶",  color: "#198754", bg: "#d1e7dd" },
-  cup:         { emoji: "☕",  color: "#d63384", bg: "#f1aeb5" }, // pink
-  book:        { emoji: "📚",  color: "#6f42c1", bg: "#e0cffc" },
-};
-const DEFAULT_CFG = { emoji: "📦", color: "#6c757d", bg: "#e2e3e5" };
+import { CLASS_ICONS, CLASS_COLORS, DEFAULT_COLOR } from "@/lib/constants";
+import { Package } from "lucide-react";
 
 export default function ResultsPanel({ counts, csvUrl, loading, progress, error }: ResultsPanelProps) {
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
@@ -120,20 +105,23 @@ export default function ResultsPanel({ counts, csvUrl, loading, progress, error 
         {!loading && !error && entries.length > 0 && (
           <div className="d-flex flex-column gap-3 anim-fade-up">
             {entries.map(([cls, count]) => {
-              const cfg = CLASS_CFG[cls] ?? DEFAULT_CFG;
+              const Icon = CLASS_ICONS[cls] ?? Package;
+              const color = CLASS_COLORS[cls] ?? DEFAULT_COLOR;
               const barPct = (count / maxCount) * 100;
               return (
                 <div key={cls} className="d-flex flex-column gap-2">
                   <div className="d-flex align-items-center justify-content-between">
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="fs-5 lh-1">{cfg.emoji}</span>
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="bg-light rounded-3 d-flex align-items-center justify-content-center" style={{ width: '32px', height: '32px' }}>
+                        <Icon size={18} style={{ color }} />
+                      </div>
                       <span className="fw-semibold text-dark text-capitalize small">{cls}</span>
                     </div>
-                    <span className="fw-bold" style={{ color: cfg.color }}>{count}</span>
+                    <span className="fw-bold small" style={{ color }}>{count}</span>
                   </div>
                   <div className="progress rounded-pill bg-light" style={{ height: '6px' }}>
                     <div className="progress-bar rounded-pill transition-all duration-500"
-                      style={{ width: `${barPct}%`, backgroundColor: cfg.color }} />
+                      style={{ width: `${barPct}%`, backgroundColor: color }} />
                   </div>
                 </div>
               );

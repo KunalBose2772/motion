@@ -1,7 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
 :root {
-  --bs-font-sans-serif: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --bs-font-sans-serif: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-outfit), sans-serif;
   --bs-primary: #4f46e5;
   --bs-primary-rgb: 79, 70, 229;
   --bs-body-bg: #f8fafc;
@@ -18,6 +17,10 @@ body {
   -webkit-font-smoothing: antialiased;
   background-color: var(--bs-body-bg);
   color: var(--bs-body-color);
+}
+
+h1, h2, h3, h4, h5, h6, .display-1, .display-2, .display-3, .display-4, .display-5, .display-6 {
+  font-family: var(--font-heading);
 }
 
 /* Custom Utilities that Bootstrap doesn't provide natively out of the box in the exact way we want */

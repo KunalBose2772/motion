@@ -51,3 +51,5 @@ venv/
 backend/uploads/
 backend/outputs/
 backend/*.pt
+vision-analytics/
+

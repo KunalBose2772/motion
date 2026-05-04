@@ -7,11 +7,8 @@ import { drawDetections, clearCanvas } from "@/lib/drawing";
 const WS_URL         = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000/ws/live";
 const FRAME_INTERVAL = 120;
 
-const CLASS_EMOJI: Record<string, string> = {
-  bed: "🛏️", chair: "🪑", table: "🪵", person: "🧑",
-  monitor: "🖥️", laptop: "💻", sofa: "🛋️", tv: "📺",
-  bottle: "🍶", cup: "☕", book: "📚",
-};
+import { CLASS_ICONS } from "@/lib/constants";
+import { Package } from "lucide-react";
 
 export default function LiveCamera() {
   const videoRef        = useRef<HTMLVideoElement>(null);
@@ -92,7 +89,7 @@ export default function LiveCamera() {
       const ctx = tmp.getContext("2d");
       if (!ctx) return;
       ctx.drawImage(v, 0, 0);
-      ws.send(tmp.toDataURL("image/jpeg", 0.55));
+      ws.send(tmp.toDataURL("image/jpeg", 0.75)); // Higher quality for better detection accuracy
     }, FRAME_INTERVAL);
   }, []);
 
@@ -321,21 +318,26 @@ export default function LiveCamera() {
                   <span className="fs-4 fw-black text-primary lh-1">{total}</span>
                 </div>
                 {/* Per-class list */}
-                {entries.map(([cls, count]) => (
-                  <div key={cls} className="d-flex align-items-center justify-content-between py-2">
-                    <div className="d-flex align-items-center gap-3">
-                      <span className="fs-4 lh-1">{CLASS_EMOJI[cls] ?? "📦"}</span>
-                      <span className="small fw-bold text-dark text-capitalize">{cls}</span>
-                    </div>
-                    <div className="d-flex align-items-center gap-3">
-                      <div className="progress rounded-pill bg-light" style={{ width: '80px', height: '6px' }}>
-                        <div className="progress-bar bg-primary rounded-pill transition-all"
-                          style={{ width: `${(count / (entries[0][1] || 1)) * 100}%` }} />
+                {entries.map(([cls, count]) => {
+                  const Icon = CLASS_ICONS[cls] ?? Package;
+                  return (
+                    <div key={cls} className="d-flex align-items-center justify-content-between py-2">
+                      <div className="d-flex align-items-center gap-3">
+                        <div className="bg-light rounded-3 d-flex align-items-center justify-content-center" style={{ width: '32px', height: '32px' }}>
+                          <Icon size={18} className="text-primary" />
+                        </div>
+                        <span className="small fw-bold text-dark text-capitalize">{cls}</span>
                       </div>
-                      <span className="small fw-black text-dark text-end" style={{ width: '20px' }}>{count}</span>
+                      <div className="d-flex align-items-center gap-3">
+                        <div className="progress rounded-pill bg-light" style={{ width: '80px', height: '6px' }}>
+                          <div className="progress-bar bg-primary rounded-pill transition-all"
+                            style={{ width: `${(count / (entries[0][1] || 1)) * 100}%` }} />
+                        </div>
+                        <span className="small fw-black text-dark text-end" style={{ width: '20px' }}>{count}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </>
             )}
           </div>
