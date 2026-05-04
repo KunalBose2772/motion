@@ -9,3 +9,6 @@ services:
     envVars:
       - key: PORT
         value: 8000
+      - key: YOLO_MODEL
+        value: yolov8s-worldv2.pt
+

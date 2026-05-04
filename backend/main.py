@@ -41,10 +41,15 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 
 # ---- High-Accuracy Model Setup -----------------------------------------------
 
-print("🚀 Loading YOLO-World (Large) for maximum accuracy...")
-# Large model for best open-vocabulary performance. 
-# We use v2 for better architectural efficiency and recall.
-model = YOLOWorld("yolov8l-worldv2.pt")
+# Model Selection: Default to Large for local, Small for memory-constrained cloud (Render)
+model_name = os.environ.get("YOLO_MODEL")
+if not model_name:
+    model_name = "yolov8s-worldv2.pt" if os.environ.get("RENDER") else "yolov8l-worldv2.pt"
+
+print(f"🚀 Loading YOLO-World ({model_name}) for maximum accuracy...")
+model = YOLOWorld(model_name)
+model.fuse() # Optimization: fuses Conv2d + BatchNorm2d layers
+
 
 # Refined prompts: Mixed specificity to balance zero-shot detection and precision.
 TARGET_CLASSES: list[str] = [
