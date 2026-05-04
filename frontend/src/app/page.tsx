@@ -8,6 +8,8 @@ import UploadBox from "@/components/UploadBox";
 import VideoPlayerWithOverlay from "@/components/VideoPlayerWithOverlay";
 import ResultsPanel from "@/components/ResultsPanel";
 import LiveCamera from "@/components/LiveCamera";
+import ImageViewerWithOverlay from "@/components/ImageViewerWithOverlay";
+
 
 export default function Dashboard() {
   const [activeTab,  setActiveTab]  = useState<TabId>("upload");
@@ -45,27 +47,44 @@ export default function Dashboard() {
     setVideoFile(file); setVideoUrl(url);
     setFrames([]); setCounts({}); setCsvUrl(null);
     setAnalyzed(false); setError(null); setProgress(0);
+    
+    // Auto-switch to upload tab
+    setActiveTab("upload");
   }, []);
+
+
 
   const handleAnalyze = useCallback(async () => {
     if (!videoFile) return;
     setLoading(true); setAnalyzed(false); setError(null);
     startProgress();
     try {
+      const isImage = videoFile.type.startsWith("image/");
+      const endpoint = isImage ? "/api/analyze-image" : "/api/analyze";
+      const fileKey = isImage ? "image" : "video";
+      
       const form = new FormData();
-      form.append("video", videoFile);
-      const res = await fetch("/api/analyze", { method: "POST", body: form });
+      form.append(fileKey, videoFile);
+      
+      const res = await fetch(endpoint, { method: "POST", body: form });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.detail ?? `Server error ${res.status}`);
       }
       const data = await res.json();
       finishProgress();
-      setFrames(data.frames ?? []);
-      setCounts(data.counts ?? {});
-      if (data.csv_url) {
-        const name = (data.csv_url as string).split("/").pop() ?? "results.csv";
-        setCsvUrl(`/api/download/${name}`);
+      
+      if (isImage) {
+        setFrames([{ timestamp: 0, detections: data.detections ?? [] }]);
+        setCounts(data.counts ?? {});
+        setCsvUrl(null); // No CSV for single image
+      } else {
+        setFrames(data.frames ?? []);
+        setCounts(data.counts ?? {});
+        if (data.csv_url) {
+          const name = (data.csv_url as string).split("/").pop() ?? "results.csv";
+          setCsvUrl(`/api/download/${name}`);
+        }
       }
       setAnalyzed(true);
     } catch (err) {
@@ -75,6 +94,7 @@ export default function Dashboard() {
       setLoading(false);
     }
   }, [videoFile, startProgress, finishProgress]);
+
 
   const handleReset = useCallback(() => {
     if (blobUrl.current) { URL.revokeObjectURL(blobUrl.current); blobUrl.current = ""; }
@@ -126,26 +146,36 @@ export default function Dashboard() {
           <div className="card-header bg-white border-bottom px-4 pt-4 pb-3 d-flex align-items-center justify-content-between flex-wrap gap-3">
             <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-            {/* Upload tab actions */}
+            {/* Media Actions */}
             {activeTab === "upload" && videoFile && (
               <div className="d-flex align-items-center gap-2">
                 {/* File chip */}
                 <div className="d-flex align-items-center gap-2 text-secondary bg-light border px-3 py-2 rounded-3 text-truncate" style={{ maxWidth: '200px', fontSize: '13px' }}>
+
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                    <polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" />
+                    {videoFile.type.startsWith("image/") ? (
+                       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    ) : (
+                      <>
+                        <polygon points="23 7 16 12 23 17 23 7" />
+                        <rect x="1" y="5" width="15" height="14" rx="2" />
+                      </>
+                    )}
+
                   </svg>
                   <span className="fw-semibold text-truncate">{videoFile.name}</span>
                 </div>
 
                 {/* Analyze button */}
                 {!analyzed && !loading && (
-                  <button id="analyze-video" onClick={handleAnalyze} className="btn btn-primary d-flex align-items-center gap-2 px-4 rounded-3">
+                  <button id="analyze-media" onClick={handleAnalyze} className="btn btn-primary d-flex align-items-center gap-2 px-4 rounded-3">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                     </svg>
-                    Analyze
+                    Analyze {videoFile.type.startsWith("image/") ? "Photo" : "Video"}
                   </button>
                 )}
+
 
                 {/* Re-analyze */}
                 {analyzed && !loading && (
@@ -156,6 +186,7 @@ export default function Dashboard() {
                     Re-run
                   </button>
                 )}
+
 
                 {/* Loading */}
                 {loading && (
@@ -182,7 +213,7 @@ export default function Dashboard() {
           {/* Card content */}
           <div className="card-body p-4 p-lg-5">
 
-            {/* ── Upload tab ── */}
+            {/* ── Media upload tab ── */}
             {activeTab === "upload" && (
               <div className="row g-5">
 
@@ -197,9 +228,9 @@ export default function Dashboard() {
                       {/* How it works */}
                       <div className="row g-4">
                         {[
-                          { step: "01", title: "Upload Video", desc: "Drag & drop or browse for an MP4, AVI, or MOV file.", icon: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12", gradient: "bg-punchy-pink" },
-                          { step: "02", title: "AI Analysis", desc: "Our YOLOv8 engine automatically detects and tracks objects.", icon: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11", gradient: "bg-punchy-cyan" },
-                          { step: "03", title: "Get Results", desc: "View live bounding boxes and download your CSV report.", icon: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3", gradient: "bg-punchy-orange" },
+                          { step: "01", title: "Upload Media", desc: "Drag & drop a video (MP4, AVI) or a photo (JPG, PNG).", icon: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12", gradient: "bg-punchy-pink" },
+                          { step: "02", title: "AI Analysis", desc: "Our YOLO-World engine detects and tracks objects automatically.", icon: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11", gradient: "bg-punchy-cyan" },
+                          { step: "03", title: "Get Results", desc: "View bounding boxes and get a detailed inventory summary.", icon: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3", gradient: "bg-punchy-orange" },
                         ].map(({ step, title, desc, icon, gradient }) => (
                           <div key={step} className="col-12 col-md-4">
                             <div className="card h-100 border-0 bg-white rounded-4 p-4 shadow-custom-sm transition-all hover-shadow-md">
@@ -221,9 +252,13 @@ export default function Dashboard() {
                     </div>
                   )}
 
-                  {videoUrl && (
+                  {videoUrl && videoFile && (
                     <div className="d-flex flex-column gap-4 anim-fade-up">
-                      <VideoPlayerWithOverlay src={videoUrl} frames={frames} />
+                      {videoFile.type.startsWith("image/") ? (
+                        <ImageViewerWithOverlay src={videoUrl} detections={frames[0]?.detections ?? []} />
+                      ) : (
+                        <VideoPlayerWithOverlay src={videoUrl} frames={frames} />
+                      )}
 
                       {/* Error */}
                       {error && (
@@ -234,7 +269,7 @@ export default function Dashboard() {
                           <div>
                             <h6 className="fw-bold mb-1">Analysis Failed</h6>
                             <p className="mb-1 small">{error}</p>
-                            <small className="text-danger opacity-75">Make sure the Python backend is running on port 8000.</small>
+                            <small className="text-danger opacity-75">Ensure the backend is running and you have an internet connection.</small>
                           </div>
                         </div>
                       )}
@@ -249,12 +284,14 @@ export default function Dashboard() {
                               </svg>
                             </div>
                             <span className="fw-bold text-success-emphasis">
-                              Detection complete — {Object.values(counts).reduce((a, b) => a + b, 0)} unique objects found
+                              {videoFile.type.startsWith("image/") ? "Photo" : "Video"} analysis complete — {Object.values(counts).reduce((a, b) => a + b, 0)} items identified
                             </span>
                           </div>
-                          <span className="badge bg-success bg-opacity-25 text-success rounded-pill px-3 py-2 fw-bold">
-                            {frames.length} frames
-                          </span>
+                          {!videoFile.type.startsWith("image/") && (
+                            <span className="badge bg-success bg-opacity-25 text-success rounded-pill px-3 py-2 fw-bold">
+                              {frames.length} frames
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -276,7 +313,8 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* ── Live camera tab ── */}
+
+
             {activeTab === "live" && <LiveCamera />}
           </div>
         </div>

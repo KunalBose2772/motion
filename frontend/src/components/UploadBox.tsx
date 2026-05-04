@@ -15,7 +15,7 @@ export default function UploadBox({ onFileSelect, hasFile }: UploadBoxProps) {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file?.type.startsWith("video/")) onFileSelect(file);
+    if (file?.type.startsWith("video/") || file?.type.startsWith("image/")) onFileSelect(file);
   }, [onFileSelect]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,7 +34,7 @@ export default function UploadBox({ onFileSelect, hasFile }: UploadBoxProps) {
     <div
       role="button"
       tabIndex={0}
-      aria-label="Upload video"
+      aria-label="Upload media"
       onDrop={handleDrop}
       onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
       onDragLeave={() => setIsDragging(false)}
@@ -44,7 +44,7 @@ export default function UploadBox({ onFileSelect, hasFile }: UploadBoxProps) {
       className={dropzoneClass}
       style={{ cursor: "pointer", borderColor: isDragging ? "var(--bs-primary)" : "#dee2e6" }}
     >
-      <input ref={inputRef} type="file" accept="video/*" className="d-none" onChange={handleChange} />
+      <input ref={inputRef} type="file" accept="video/*,image/*" className="d-none" onChange={handleChange} />
 
       <div className="py-5 d-flex flex-column align-items-center justify-content-center gap-4 relative">
         
@@ -53,9 +53,9 @@ export default function UploadBox({ onFileSelect, hasFile }: UploadBoxProps) {
           <div className={`d-flex align-items-center justify-content-center rounded-4 transition-all ${isDragging ? "bg-punchy-primary text-white shadow-custom-md" : "bg-light text-primary border"}`}
                style={{ width: "80px", height: "80px", transform: isDragging ? "scale(1.1)" : "scale(1)" }}>
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
             </svg>
           </div>
           {/* Small badge */}
@@ -70,7 +70,7 @@ export default function UploadBox({ onFileSelect, hasFile }: UploadBoxProps) {
         {/* Text */}
         <div>
           <h4 className="fs-5 fw-bold text-dark mb-1">
-            {isDragging ? "Release to upload" : "Drop your video here"}
+            {isDragging ? "Release to upload" : "Drop your video or photo here"}
           </h4>
           <p className="text-secondary mb-0">
             or <span className="text-primary fw-bold text-decoration-underline" style={{ textUnderlineOffset: '4px' }}>browse files</span>
@@ -79,7 +79,7 @@ export default function UploadBox({ onFileSelect, hasFile }: UploadBoxProps) {
 
         {/* Format chips */}
         <div className="d-flex flex-wrap justify-content-center gap-2 mt-2">
-          {["MP4", "AVI", "MOV", "WebM", "MKV"].map((f) => (
+          {["JPG", "PNG", "MP4", "MOV", "WebM"].map((f) => (
             <span key={f} className="badge bg-light text-secondary border rounded-pill px-3 py-2 fw-bold" style={{ fontSize: "11px", letterSpacing: "1px" }}>
               {f}
             </span>

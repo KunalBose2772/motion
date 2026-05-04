@@ -39,5 +39,7 @@ export interface LiveDetectionMessage {
 /** Tab identifiers */
 export type TabId = "upload" | "live";
 
+
+
 /** Connection states for WebSocket */
 export type ConnectionState = "disconnected" | "connecting" | "connected" | "error";

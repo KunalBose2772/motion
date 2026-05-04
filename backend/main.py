@@ -20,6 +20,8 @@ from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSock
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from ultralytics import YOLOWorld
+from PIL import Image
+
 
 app = FastAPI(title="Motion Movers High-Accuracy API", version="2.1.0")
 
@@ -40,44 +42,40 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 # ---- High-Accuracy Model Setup -----------------------------------------------
 
 print("🚀 Loading YOLO-World (Large) for maximum accuracy...")
-# Switching to 'l' (Large) version for significantly better open-vocabulary performance
-model = YOLOWorld("yolov8l-worldv2.pt")# Using Spatial Context to help YOLO-World distinguish floor vs wall items.
+# Large model for best open-vocabulary performance. 
+# We use v2 for better architectural efficiency and recall.
+model = YOLOWorld("yolov8l-worldv2.pt")
+
+# Refined prompts: Mixed specificity to balance zero-shot detection and precision.
 TARGET_CLASSES: list[str] = [
-    # Furniture (Floor based)
-    "king size bed frame on floor", "queen size bed frame on floor", "single bed frame on floor",
-    "large sofa with backrest on floor", "small sofa armchair on floor", "l-shape couch on floor", 
-    "low cushioned ottoman footstool on floor", "rectangular center table on floor", "round coffee table on floor",
-    "wooden dining table", "glass dining table", "office desk", "study table",
-    "wooden chair with backrest", "plastic chair", "office rolling chair",
-    "large wardrobe almirah", "metal almirah cupboard", "dressing table with mirror",
-    "tall bookshelf", "shoe rack cabinet", "kitchen storage cabinet", "crockery unit cupboard",
-    "bed side table", "bean bag chair", "prayer unit mandir", "mattress on bed",
+    # Furniture
+    "bed", "double bed", "king size bed", "sofa", "couch", "armchair", "l-shape sofa",
+    "ottoman", "center table", "coffee table", "dining table", "office desk", "study table",
+    "chair", "office chair", "wardrobe", "almirah", "cupboard", "dressing table",
+    "bookshelf", "shoe rack", "cabinet", "crockery unit", "bed side table", "bean bag", "mattress",
     
-    # Appliances (Wall or Counter based)
-    "white rectangular split air conditioner indoor unit", "square window ac unit",
-    "tall kitchen refrigerator fridge with doors", "laundry washing machine", "compact microwave oven box", "automatic dishwasher",
-    "led flat screen television tv", "wall mounted water purifier", "electric geyser water heater", 
-    "portable indoor air cooler with front vents", "ceiling fan with blades",
-    "induction cooktop stove", "gas stove burner", "kitchen chimney hood", "mixer grinder blender",
-    "vertical water dispenser cooler", "air purifier machine", "ups inverter battery unit",
+    # Appliances
+    "air conditioner", "ac indoor unit", "refrigerator", "fridge", "washing machine", 
+    "microwave oven", "dishwasher", "television", "tv", "water purifier", "geyser", 
+    "air cooler", "ceiling fan", "induction stove", "gas stove", "kitchen chimney",
+    "mixer grinder", "water dispenser", "air purifier", "ups battery", "inverter",
     
     # Packing & Storage
-    "corrugated brown carton box", "large shipping cardboard box", "travel suitcase with wheels", "heavy metal trunk",
-    "plastic crate bin", "backpack travel bag",
+    "carton box", "cardboard box", "shipping box", "suitcase", "luggage", "trunk",
+    "plastic crate", "backpack", "travel bag",
     
     # Misc & Gym
-    "potted floor plant", "wall mirror", "framed wall painting", "bicycle", "treadmill gym machine",
-    "gas cylinder tank", "rolled carpet rug", "wall clock", "floor lamp", "vacuum cleaner",
-    "exercise dumbbells", "computer monitor screen", "laptop computer", "printer scanner machine",
-    "desktop computer tower",
+    "potted plant", "wall mirror", "wall painting", "picture frame", "bicycle", "treadmill",
+    "gas cylinder", "carpet", "rug", "wall clock", "floor lamp", "vacuum cleaner",
+    "dumbbell", "computer monitor", "laptop", "printer", "computer tower",
     
-    # Sink Classes (to catch common misidentifications)
-    "human person standing sitting",
-    "electric power socket on wall", "wall plug", "electrical switch board", "ceiling light fixture"
+    # Sink Classes
+    "person", "human", "power socket", "wall plug", "ceiling light"
 ]
 
 model.set_classes(TARGET_CLASSES)
-print(f"✅ 'Spatial Context' Model ready with {len(TARGET_CLASSES)} refined classes.")
+print(f"✅ Detection model ready with {len(TARGET_CLASSES)} optimized prompts.")
+
 
 # ---- Improved Visual Memory (Re-ID) ------------------------------------------
 
@@ -138,21 +136,21 @@ visual_memory = VisualMemory()
 _next_synthetic_id: int = 0
 
 def get_clean_label(raw_cls: str) -> str:
-    """Maps complex AI prompts to clean UI categories matching CLASS_EMOJI keys."""
+    """Maps robust detection terms to clean UI categories."""
     c = raw_cls.lower()
     
     # Furniture
     if "bed" in c and "side" not in c and "mattress" not in c: return "bed"
     if "sofa" in c or "couch" in c or "armchair" in c: return "sofa"
-    if "ottoman" in c or "footstool" in c: return "ottoman"
+    if "ottoman" in c: return "ottoman"
     if "dining table" in c: return "dining table"
-    if "office desk" in c or "study table" in c: return "desk"
+    if "office desk" in c or "study table" in c or "desk" in c: return "desk"
     if "center table" in c or "coffee table" in c: return "center table"
     if "chair" in c or "bean bag" in c: return "chair"
     if "wardrobe" in c or "almirah" in c or "cupboard" in c: return "wardrobe"
     if "bookshelf" in c: return "bookshelf"
     if "crockery unit" in c: return "crockery unit"
-    if "cabinet" in c: return "cabinet"
+    if "cabinet" in c or "shoe rack" in c: return "cabinet"
     if "dressing table" in c: return "dressing table"
     if "mattress" in c: return "mattress"
     
@@ -169,38 +167,70 @@ def get_clean_label(raw_cls: str) -> str:
     if "chimney" in c: return "kitchen chimney"
     if "mixer" in c or "grinder" in c: return "mixer grinder"
     if "air cooler" in c: return "air cooler"
-    if "dispenser" in c or "cooler" in c: return "water dispenser"
+    if "dispenser" in c: return "water dispenser"
     if "purifier" in c and "water" not in c: return "air purifier"
-    if "ups" in c or "inverter" in c: return "ups inverter"
+    if "ups" in c or "inverter" in c or "battery" in c: return "ups inverter"
     
     # Electronics
     if "monitor" in c: return "monitor"
     if "laptop" in c: return "laptop"
     if "printer" in c: return "printer"
-    if "computer tower" in c: return "desktop computer"
+    if "computer tower" in c or "desktop" in c: return "desktop computer"
     
     # Packing
     if "box" in c or "crate" in c: return "carton box"
-    if "suitcase" in c: return "suitcase"
+    if "suitcase" in c or "luggage" in c: return "suitcase"
     if "backpack" in c or "travel bag" in c: return "travel bag"
     if "trunk" in c: return "trunk"
     
     # Misc
     if "mirror" in c: return "mirror"
-    if "painting" in c: return "framed painting"
+    if "painting" in c or "frame" in c: return "framed painting"
     if "plant" in c: return "potted plant"
     if "clock" in c: return "wall clock"
     if "carpet" in c or "rug" in c: return "rolled carpet"
     if "cylinder" in c: return "gas cylinder"
-    if "dumbbells" in c: return "dumbbells"
+    if "dumbbell" in c: return "dumbbells"
     if "fan" in c: return "ceiling fan"
+    if "lamp" in c: return "floor lamp"
+    if "vacuum" in c: return "vacuum cleaner"
     
     if "person" in c or "human" in c: return "person"
     if "socket" in c or "plug" in c or "switch" in c or "light" in c: return "sink"
     
-    return raw_cls.split(" ")[-1]
+    return c
 
-def run_detection_on_frame(bgr: np.ndarray, track_history: dict[int, str], frame_idx: int) -> list[dict]:
+
+def calculate_iou(box1: list[float], box2: list[float]) -> float:
+    """Calculate Intersection over Union of two [x, y, w, h] boxes."""
+    x1, y1, w1, h1 = box1
+    x2, y2, w2, h2 = box2
+    ax1, ay1, ax2, ay2 = x1 - w1/2, y1 - h1/2, x1 + w1/2, y1 + h1/2
+    bx1, by1, bx2, by2 = x2 - w2/2, y2 - h2/2, x2 + w2/2, y2 + h2/2
+    ix1, iy1, ix2, iy2 = max(ax1, bx1), max(ay1, by1), min(ax2, bx2), min(ay2, by2)
+    iw, ih = max(0, ix2 - ix1), max(0, iy2 - iy1)
+    iarea = iw * ih
+    if iarea <= 0: return 0.0
+    area1, area2 = w1 * h1, w2 * h2
+    union = area1 + area2 - iarea
+    return iarea / union if union > 0 else 0.0
+
+
+def merge_detections(detections: list[dict], iou_thresh: float = 0.55) -> list[dict]:
+    """Class-aware NMS to merge duplicate boxes from multi-scale inference."""
+    merged: list[dict] = []
+    # Sort by confidence descending
+    sorted_dets = sorted(detections, key=lambda d: d.get("confidence", 0), reverse=True)
+    for det in sorted_dets:
+        is_dup = False
+        for kept in merged:
+            if det["class"] == kept["class"] and calculate_iou(det["box"], kept["box"]) >= iou_thresh:
+                is_dup = True; break
+        if not is_dup: merged.append(det)
+    return merged
+
+
+def run_detection_on_frame(bgr: np.ndarray, track_history: dict[int, str], frame_idx: int, imgsz: int = 640, augment: bool = False, conf: float = 0.25) -> list[dict]:
     global _next_synthetic_id
     
     results = model.track(
@@ -208,10 +238,13 @@ def run_detection_on_frame(bgr: np.ndarray, track_history: dict[int, str], frame
         persist=True, 
         tracker="bytetrack.yaml", 
         verbose=False, 
-        conf=0.30, 
-        iou=0.25, # Very strict IOU to suppress overlapping ghost boxes
-        imgsz=640
+        conf=conf, 
+        iou=0.35,
+        imgsz=imgsz,
+        augment=augment
     )
+
+
     
     detections: list[dict] = []
     if not results or results[0].boxes is None: return detections
@@ -290,10 +323,13 @@ async def analyze_video(video: UploadFile = File(...)):
         ret, bgr = cap.read()
         if not ret: break
         if frame_idx % sample_every == 0:
-            ts = frame_idx / fps; dets = run_detection_on_frame(bgr, track_history, frame_idx)
+            ts = frame_idx / fps; 
+            # High-Precision settings for video files: Larger image size and Augmentation
+            dets = run_detection_on_frame(bgr, track_history, frame_idx, imgsz=960, augment=True)
             if dets: frames_data.append({"timestamp": round(ts, 3), "detections": dets})
             sampled_count += 1
-            if sampled_count % 10 == 0: print(f"⏳ Processed {frame_idx}/{total_frames} frames...")
+            if sampled_count % 5 == 0: print(f"⏳ Processed {frame_idx}/{total_frames} frames...")
+
         frame_idx += 1
     print(f"✅ Processing complete. Found detections in {len(frames_data)} sampled frames.")
     cap.release(); tmp_path.unlink()
@@ -351,6 +387,40 @@ async def analyze_video(video: UploadFile = File(...)):
             
     csv_fn = f"{job_id}_results.csv"; (OUTPUT_DIR / csv_fn).write_text(build_csv(frames_data, counts), encoding="utf-8")
     return JSONResponse({"job_id": job_id, "frames": frames_data, "counts": counts, "csv_url": f"/download/{csv_fn}"})
+
+@app.post("/analyze-image")
+async def analyze_image(image: UploadFile = File(...)):
+    """High-accuracy multi-scale detection for single uploaded images."""
+    if not image.content_type or not image.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Uploaded file is not an image.")
+    
+    contents = await image.read()
+    pil_img = Image.open(io.BytesIO(contents)).convert("RGB")
+    bgr = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    
+    # Multi-scale inference to capture both small and large objects (matching vision-analytics)
+    raw_dets = []
+    track_history: dict[int, str] = {}
+    
+    for size in (1280, 1536):
+        # Using a lower confidence threshold for images to catch subtle items
+        dets = run_detection_on_frame(bgr, track_history, 0, imgsz=size, augment=True, conf=0.15)
+        raw_dets.extend(dets)
+    
+    # Merge overlapping detections of the same class
+    final_dets = merge_detections(raw_dets)
+    
+    counts: dict[str, int] = {}
+    for d in final_dets:
+        counts[d["class"]] = counts.get(d["class"], 0) + 1
+        
+    return JSONResponse({
+        "detections": final_dets,
+        "counts": counts,
+        "image_size": pil_img.size
+    })
+
+
 
 @app.get("/download/{filename}")
 async def download_csv(filename: str):
