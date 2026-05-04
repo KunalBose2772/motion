@@ -74,12 +74,14 @@ TARGET_CLASSES: list[str] = [
     "gas cylinder", "carpet", "rug", "wall clock", "floor lamp", "vacuum cleaner",
     "dumbbell", "computer monitor", "laptop", "printer", "computer tower",
     
-    # Competitive Contrast Classes (To reduce false positives for mirrors/glass)
+    # Competitive Contrast Classes (To reduce false positives for mirrors/glass/furniture)
     "glass window", "glass door", "glass partition", "transparent glass",
+    "staircase", "stairs", "wooden stairs", "steps",
     
     # Sink Classes
-    "person", "human", "power socket", "wall plug", "ceiling light"
+    "person", "human", "power socket", "wall plug", "ceiling light", "wall", "floor", "ceiling"
 ]
+
 
 
 model.set_classes(TARGET_CLASSES)
@@ -204,11 +206,14 @@ def get_clean_label(raw_cls: str) -> str:
     if "lamp" in c: return "floor lamp"
     if "vacuum" in c: return "vacuum cleaner"
     
-    # Glass filtration (often misidentified as mirrors)
+    # Structural & Background filtration (often misidentified as furniture)
     if "glass" in c or "window" in c or "partition" in c: return "sink"
+    if "stair" in c or "step" in c: return "sink"
+    if "wall" in c or "floor" in c or "ceiling" in c: return "sink"
     
     if "person" in c or "human" in c: return "person"
     if "socket" in c or "plug" in c or "switch" in c or "light" in c: return "sink"
+
 
     
     return c
