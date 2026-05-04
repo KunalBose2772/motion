@@ -70,13 +70,17 @@ TARGET_CLASSES: list[str] = [
     "plastic crate", "backpack", "travel bag",
     
     # Misc & Gym
-    "potted plant", "wall mirror", "wall painting", "picture frame", "bicycle", "treadmill",
+    "potted plant", "reflective mirror", "wall painting", "picture frame", "bicycle", "treadmill",
     "gas cylinder", "carpet", "rug", "wall clock", "floor lamp", "vacuum cleaner",
     "dumbbell", "computer monitor", "laptop", "printer", "computer tower",
+    
+    # Competitive Contrast Classes (To reduce false positives for mirrors/glass)
+    "glass window", "glass door", "glass partition", "transparent glass",
     
     # Sink Classes
     "person", "human", "power socket", "wall plug", "ceiling light"
 ]
+
 
 model.set_classes(TARGET_CLASSES)
 print(f"✅ Detection model ready with {len(TARGET_CLASSES)} optimized prompts.")
@@ -200,8 +204,12 @@ def get_clean_label(raw_cls: str) -> str:
     if "lamp" in c: return "floor lamp"
     if "vacuum" in c: return "vacuum cleaner"
     
+    # Glass filtration (often misidentified as mirrors)
+    if "glass" in c or "window" in c or "partition" in c: return "sink"
+    
     if "person" in c or "human" in c: return "person"
     if "socket" in c or "plug" in c or "switch" in c or "light" in c: return "sink"
+
     
     return c
 
