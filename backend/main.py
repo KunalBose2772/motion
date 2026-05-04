@@ -56,10 +56,8 @@ TARGET_CLASSES: list[str] = [
     # Furniture
     "bed", "double bed", "king size bed", "sofa", "couch", "armchair", "l-shape sofa",
     "ottoman", "center table", "coffee table", "dining table", "office desk", "study table",
-    "chair", "office chair", "wardrobe closet", "metal almirah", "storage cabinet", "dressing table",
-    "bookshelf", "shoe rack", "cabinet with doors", "crockery unit", "bed side table", "bean bag", "mattress",
-
-
+    "chair", "office chair", "wardrobe", "almirah", "cupboard", "dressing table",
+    "bookshelf", "shoe rack", "cabinet", "crockery unit", "bed side table", "bean bag", "mattress",
     
     # Appliances
     "air conditioner", "ac indoor unit", "refrigerator", "fridge", "washing machine", 
@@ -76,15 +74,14 @@ TARGET_CLASSES: list[str] = [
     "gas cylinder", "carpet", "rug", "wall clock", "floor lamp", "vacuum cleaner",
     "dumbbell", "computer monitor", "laptop", "printer", "computer tower",
     
-    # Competitive Contrast Classes (To reduce false positives for mirrors/glass/furniture)
+    # Competitive Contrast Classes (To reduce false positives)
     "glass window", "glass door", "glass partition", "transparent glass",
-    "interior staircase", "wooden steps", "flight of stairs", "stair railing",
+    "stairs", "staircase", "steps", "wall", "floor", "ceiling",
 
     
     # Sink Classes
-    "person", "human", "power socket", "wall plug", "ceiling light", "wall", "floor", "ceiling"
+    "person", "human", "power socket", "wall plug", "ceiling light"
 ]
-
 
 
 model.set_classes(TARGET_CLASSES)
@@ -161,9 +158,10 @@ def get_clean_label(raw_cls: str) -> str:
     if "office desk" in c or "study table" in c or "desk" in c: return "desk"
     if "center table" in c or "coffee table" in c: return "center table"
     if "chair" in c or "bean bag" in c: return "chair"
-    if "wardrobe" in c or "almirah" in c or "closet" in c: return "wardrobe"
-    if "cabinet" in c or "cupboard" in c or "shelf" in c or "rack" in c: return "cabinet"
-
+    if "wardrobe" in c or "almirah" in c or "cupboard" in c: return "wardrobe"
+    if "bookshelf" in c: return "bookshelf"
+    if "crockery unit" in c: return "crockery unit"
+    if "cabinet" in c or "shoe rack" in c: return "cabinet"
     if "dressing table" in c: return "dressing table"
     if "mattress" in c: return "mattress"
     
@@ -208,15 +206,13 @@ def get_clean_label(raw_cls: str) -> str:
     if "lamp" in c: return "floor lamp"
     if "vacuum" in c: return "vacuum cleaner"
     
-    # Structural & Background filtration (often misidentified as furniture)
-    if "glass" in c or "window" in c or "partition" in c: return "sink"
-    if "stair" in c or "step" in c or "railing" in c: return "sink"
-    if "wall" in c or "floor" in c or "ceiling" in c: return "sink"
-
+    # Glass & Structural filtration (often misidentified as furniture)
+    if any(k in c for k in ["glass", "window", "partition", "stairs", "step", "wall", "floor", "ceiling"]):
+        return "sink"
     
     if "person" in c or "human" in c: return "person"
-    if "socket" in c or "plug" in c or "switch" in c or "light" in c: return "sink"
 
+    if "socket" in c or "plug" in c or "switch" in c or "light" in c: return "sink"
 
     
     return c
@@ -346,10 +342,9 @@ async def analyze_video(video: UploadFile = File(...)):
         if frame_idx % sample_every == 0:
             ts = frame_idx / fps; 
             
-            # High-Precision pass at 1280px for maximum video accuracy
-            # Removed TTA (augment=True) and secondary passes to minimize latency
-            dets = run_detection_on_frame(bgr, track_history, frame_idx, imgsz=1280, augment=False, conf=0.15)
-
+            # High-Precision pass at 1280px with 0.15 confidence for maximum video accuracy
+            # We use 1280px as it's the optimal balance between speed and precision for video.
+            dets = run_detection_on_frame(bgr, track_history, frame_idx, imgsz=1280, augment=True, conf=0.15)
             
             if dets: 
                 frames_data.append({"timestamp": round(ts, 3), "detections": dets})
@@ -431,10 +426,13 @@ async def analyze_image(image: UploadFile = File(...)):
     raw_dets = []
     track_history: dict[int, str] = {}
     
-    # Single high-precision pass (Optimized for speed)
-    # 1280px is the optimal balance for inventory photos.
-    final_dets = run_detection_on_frame(bgr, track_history, 0, imgsz=1280, augment=False, conf=0.15)
-
+    for size in (1280, 1536):
+        # Using a lower confidence threshold for images to catch subtle items
+        dets = run_detection_on_frame(bgr, track_history, 0, imgsz=size, augment=True, conf=0.15)
+        raw_dets.extend(dets)
+    
+    # Merge overlapping detections of the same class
+    final_dets = merge_detections(raw_dets)
     
     counts: dict[str, int] = {}
     for d in final_dets:
