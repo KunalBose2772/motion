@@ -1,13 +1,14 @@
 import { 
-  Archive, Bed, Book, Box, Coffee, Computer, Cpu, Fan, Flame, 
-  Gamepad, HardDrive, Home, Lamp, Laptop, Layout, Library, 
-  Luggage, Microwave, Monitor, Package, Paintbrush, Palette, 
-  Pencil, Phone, Printer, Refrigerator, Sofa, Speaker, Tablet, 
-  Tv, Utensils, WashingMachine, Watch, Wind, 
-  Dumbbell, Bike, Flower2, Clock, MapPin, Trash2, Droplets, 
-  Thermometer, Power, Battery, Zap, Frame, ShoppingBag, 
-  Container, Waves, Table, Armchair
+  Archive, Bed, Book, Box, Coffee, Computer, Fan, Flame, 
+  Laptop, Layout, Library, 
+  Luggage, Microwave, Monitor, Package, 
+  Printer, Refrigerator, Sofa, 
+  Tv, Utensils, WashingMachine, Wind, 
+  Dumbbell, Bike, Flower2, Clock, Droplets, 
+  Thermometer, Battery, Zap, Frame, ShoppingBag, 
+  Container, Table, Armchair
 } from "lucide-react";
+
 
 export const CLASS_ICONS: Record<string, React.ElementType> = {
   almirah: Archive, wardrobe: Archive, cupboard: Library, bookshelf: Book, cabinet: Library, "crockery unit": Utensils,

@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useEffect, useCallback, useState } from "react";
+import { useRef, useEffect, useCallback } from "react";
+
 import type { Detection } from "@/types";
 import { drawDetections, clearCanvas } from "@/lib/drawing";
 
