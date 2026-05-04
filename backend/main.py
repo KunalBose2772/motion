@@ -325,36 +325,16 @@ async def analyze_video(video: UploadFile = File(...)):
         if frame_idx % sample_every == 0:
             ts = frame_idx / fps; 
             
-            # High-Precision Multi-Scale settings for video (Matching Photo Accuracy)
-            # We do a primary pass at 1280px for tracking and a secondary pass at 1536px for recall
-            raw_dets = []
+            # High-Precision pass at 1280px with 0.15 confidence for maximum video accuracy
+            # We use 1280px as it's the optimal balance between speed and precision for video.
+            dets = run_detection_on_frame(bgr, track_history, frame_idx, imgsz=1280, augment=True, conf=0.15)
             
-            # Pass 1: 1280px (Main pass with tracking persistence)
-            dets_primary = run_detection_on_frame(bgr, track_history, frame_idx, imgsz=1280, augment=True, conf=0.15)
-            raw_dets.extend(dets_primary)
-            
-            # Pass 2: 1536px (Secondary pass for small objects, non-persistent to avoid ID bloat)
-            # We use model.predict directly here to avoid updating tracker state twice for the same frame
-            res_secondary = model.predict(bgr, imgsz=1536, augment=True, conf=0.15, verbose=False)
-            if res_secondary and res_secondary[0].boxes:
-                for box in res_secondary[0].boxes:
-                    cls_idx = int(box.cls[0])
-                    label = get_clean_label(TARGET_CLASSES[cls_idx] if cls_idx < len(TARGET_CLASSES) else "unknown")
-                    raw_dets.append({
-                        "id": 999999, # Synthetic ID for merge
-                        "class": label,
-                        "box": box.xywh[0].tolist(),
-                        "confidence": float(box.conf[0])
-                    })
-            
-            # Merge to get the most accurate results for this frame
-            final_dets = merge_detections(raw_dets)
-            
-            if final_dets: 
-                frames_data.append({"timestamp": round(ts, 3), "detections": final_dets})
+            if dets: 
+                frames_data.append({"timestamp": round(ts, 3), "detections": dets})
             
             sampled_count += 1
             if sampled_count % 5 == 0: print(f"⏳ Processed {frame_idx}/{total_frames} frames...")
+
 
 
         frame_idx += 1
